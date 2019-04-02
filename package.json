@@ -1,0 +1,19 @@
+{
+  "name": "lockbot",
+  "version": "1.0.0",
+  "author": "Adrian Sampson <adrian@radbox.org>",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@types/node": "^11.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^3.4.1"
+  },
+  "bin": {
+    "bot": "build/bot.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  }
+}
