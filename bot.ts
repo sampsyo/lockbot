@@ -8,14 +8,43 @@ function send(res: http.OutgoingMessage, data: any) {
   res.end(JSON.stringify(data));
 }
 
+// Map channel IDs to user IDs to locked things.
+let locks = new Map<string, Map<string, string>>();
+
+function getLocks(chanId: string) {
+  let out = locks.get(chanId);
+  if (out) {
+    return out;
+  }
+  let nout = new Map<string, string>();
+  locks.set(chanId, nout);
+  return nout;
+}
+
+function listLocks(chanLocks: Map<string, string>) {
+  let out: string[] = [];
+  for (let [thing, userId] of chanLocks) {
+    out.push(`<@${userId}> :lock2: ${thing}`);
+  }
+  return out.join('; ');
+}
+
 let routes = [
   new libweb.Route('/lock', async (req, res, params) => {
     let data = await libweb.formdata(req);
-    console.log(`${data.user_name} (${data.user_id}) acquired ` +
-      `${data.text} in ${data.channel_id}`);
+
+    let thing = data.text as string;
+    let chanId = data.channel_id as string;
+    let userId = data.user_id as string;
+
+    console.log(`${data.user_name} (${userId}) acquired ` +
+      `${thing} in ${chanId}`);
+    let l = getLocks(chanId);
+    l.set(thing, userId);
+
     send(res, {
       response_type: 'in_channel',
-      text: `${data.user_name} :lock2: ${data.text}`,
+      text: listLocks(l),
     });
   }),
   new libweb.Route('/unlock', async (req, res, params) => {
