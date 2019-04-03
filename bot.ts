@@ -29,18 +29,25 @@ function listLocks(chanLocks: Map<string, string>) {
   return out.join('; ');
 }
 
+async function reqData(req: http.IncomingMessage) {
+  let data = await libweb.formdata(req);
+
+  return {
+    thing: data.text as string,
+    chanId: data.channel_id as string,
+    userId: data.user_id as string,
+    userName: data.user_name as string,
+  };
+}
+
 let routes = [
   new libweb.Route('/lock', async (req, res, params) => {
-    let data = await libweb.formdata(req);
+    let d = await reqData(req);
+    console.log(`${d.userName} (${d.userId}) acquired ` +
+      `${d.thing} in ${d.chanId}`);
 
-    let thing = data.text as string;
-    let chanId = data.channel_id as string;
-    let userId = data.user_id as string;
-
-    console.log(`${data.user_name} (${userId}) acquired ` +
-      `${thing} in ${chanId}`);
-    let l = getLocks(chanId);
-    l.set(thing, userId);
+    let l = getLocks(d.chanId);
+    l.set(d.thing, d.userId);
 
     send(res, {
       response_type: 'in_channel',
@@ -48,8 +55,23 @@ let routes = [
     });
   }),
   new libweb.Route('/unlock', async (req, res, params) => {
-    console.log("unlock");
-    res.end(JSON.stringify({'foo': 'hi'}));
+    let d = await reqData(req);
+    console.log(`${d.userName} (${d.userId}) released ` +
+      `${d.thing} in ${d.chanId}`);
+
+    let l = getLocks(d.chanId);
+    if (l.get(d.thing) === d.userId) {
+      l.delete(d.thing);
+      send(res, {
+        response_type: 'in_channel',
+        text: listLocks(l),
+      });
+    } else {
+      send(res, {
+        response_type: 'ephemeral',
+        text: `you do not hold ${d.thing}: ` + listLocks(l),
+      });
+    }
   }),
 ];
 
